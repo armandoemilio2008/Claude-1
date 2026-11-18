@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Pectoral mayor 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: escenario 3D a sangre a la izquierda, panel de atlas desplazable a la derecha; en móvil se apilan */
+:root{
+  --bg:#eef1f3; --surface:#fbfcfc; --ink:#17212b; --muted:#56636f; --line:#d6dde3;
+  --stage:#cfd7de; --stage-ink:#1d2a35; --chip:#e4e9ed; --accent:#17607a; --accent-ink:#ffffff;
+  --clav:#e0892f; --ster:#d23f5a; --abd:#7d55c9; --nlat:#1f9bb5; --nmed:#cf4f97; --plexo:#d9a514; --bone:#cdbf9f; --art:#c8343a;
+  --font-display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1317; --surface:#141b21; --ink:#e3e9ee; --muted:#93a1ad; --line:#24303a;
+    --stage:#0a0f13; --stage-ink:#dfe7ee; --chip:#1d2730; --accent:#62b6d2; --accent-ink:#04222c; --bone:#d8cdb2;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1317; --surface:#141b21; --ink:#e3e9ee; --muted:#93a1ad; --line:#24303a;
+  --stage:#0a0f13; --stage-ink:#dfe7ee; --chip:#1d2730; --accent:#62b6d2; --accent-ink:#04222c; --bone:#d8cdb2;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 410px}
+.stage{position:relative;background:var(--stage);min-height:0;overflow:hidden}
+#c{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#c:active{cursor:grabbing}
+.panel{min-width:0;overflow-y:auto;background:var(--surface);border-left:1px solid var(--line);
+  padding-block:22px 40px;padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0}
+h1{font-family:var(--font-display);font-weight:700;font-size:30px;line-height:1.05;margin:4px 0 0;text-wrap:balance;letter-spacing:-.01em}
+h1 em{font-style:normal;color:var(--muted);font-weight:500}
+h2{font-family:var(--font-display);font-weight:600;font-size:19px;margin:0;text-wrap:balance}
+h3{font-family:var(--font-display);font-weight:600;font-size:16px;margin:0}
+p{margin:0}
+.lede{color:var(--muted);max-width:60ch;margin-top:8px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line);position:sticky;top:-22px;background:var(--surface);z-index:2;margin-inline:-4px}
+.tabs button{font:600 14px/1 var(--font-display);letter-spacing:.01em;background:none;border:0;color:var(--muted);padding:12px 4px 11px;border-bottom:2px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button:hover{color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.tabpanel{display:flex;flex-direction:column;gap:16px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.parts{display:flex;flex-direction:column;gap:8px}
+.part{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start;text-align:left;width:100%;
+  background:transparent;border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--ink);cursor:pointer;font:inherit}
+.part[aria-pressed="false"]{opacity:.5}
+.part:hover{border-color:var(--muted)}
+.glyph{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--chip)}
+.glyph svg{width:30px;height:30px}
+.part h3{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.part h3 small{font:500 11px var(--font-mono);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+dl.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;margin:8px 0 0;font-size:13px}
+dl.facts dt{font:500 11px/1.9 var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+dl.facts dd{margin:0}
+.note{background:var(--chip);border-radius:10px;padding:12px 14px;font-size:13px}
+.note strong{font-family:var(--font-display);font-size:14px}
+.toggles{display:flex;flex-wrap:wrap;gap:6px}
+.tg{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:5px 11px 5px 8px;cursor:pointer;font-size:13px;user-select:none}
+.tg input{accent-color:var(--accent);margin:0}
+.tg .sw{width:10px;height:10px;border-radius:50%}
+.group-title{font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:0}
+.range{display:grid;grid-template-columns:auto minmax(0,1fr) 3.2em;gap:10px;align-items:center;font-size:13px}
+.range input{width:100%;accent-color:var(--accent)}
+.range output{font:500 12px var(--font-mono);text-align:right;font-variant-numeric:tabular-nums}
+.moves{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.moves button{font:500 13px/1.25 var(--font-body);text-align:left;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.moves button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.player{display:flex;align-items:center;gap:10px}
+.btn{font:600 13px var(--font-display);letter-spacing:.02em;padding:8px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;min-width:92px}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);min-width:0}
+.player input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.phase{font:500 12px var(--font-mono);color:var(--muted);display:flex;align-items:center;gap:8px}
+.phase i{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+.phase.on i{background:var(--ster)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:999px;background:var(--chip)}
+.chip i{width:8px;height:8px;border-radius:50%}
+.bars{display:flex;flex-direction:column;gap:7px}
+.bar{display:grid;grid-template-columns:7.5em minmax(0,1fr) 3.4em;gap:10px;align-items:center;font-size:12px}
+.bar .track{height:8px;border-radius:4px;background:var(--chip);position:relative;overflow:hidden}
+.bar .fill{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.bar .mid{position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:var(--muted)}
+.bar output{font:500 12px var(--font-mono);text-align:right;font-variant-numeric:tabular-nums}
+table.seg{width:100%;border-collapse:collapse;font-size:13px}
+table.seg th,table.seg td{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+table.seg th{font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.mono{font-family:var(--font-mono);font-size:12px}
+.nerve{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.nerve h3{display:flex;align-items:center;gap:8px}
+.nerve h3 i{width:12px;height:12px;border-radius:50%}
+.nerve ul{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:3px}
+ul.rel{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:13px}
+ul.rel li{display:grid;grid-template-columns:9.5em minmax(0,1fr);gap:10px}
+ul.rel b{font-family:var(--font-display);font-weight:600}
+/* overlays del escenario */
+.views{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));display:flex;gap:4px;flex-wrap:wrap;z-index:3}
+.views button{font:500 12px var(--font-mono);padding:6px 10px;border-radius:6px;border:1px solid color-mix(in srgb,var(--stage-ink) 25%,transparent);background:color-mix(in srgb,var(--stage) 70%,transparent);color:var(--stage-ink);cursor:pointer;backdrop-filter:blur(4px)}
+.views button:hover{border-color:var(--stage-ink)}
+.legend{position:absolute;left:max(12px,env(safe-area-inset-left,0px));bottom:12px;display:flex;flex-wrap:wrap;gap:6px 12px;max-width:calc(100% - 24px);z-index:3;
+  font-size:12px;color:var(--stage-ink);background:color-mix(in srgb,var(--stage) 78%,transparent);padding:7px 10px;border-radius:8px;backdrop-filter:blur(4px)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:50%}
+.hint{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));font:400 11px var(--font-mono);color:var(--stage-ink);opacity:.7;z-index:3;text-align:right;max-width:240px}
+.labels{position:absolute;inset:0;pointer-events:none;z-index:2}
+.lbl{position:absolute;left:0;top:0;display:flex;align-items:center;gap:6px;white-space:nowrap;font:500 11.5px var(--font-body);color:var(--stage-ink);will-change:transform}
+.lbl::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;box-shadow:0 0 0 2px var(--stage)}
+.lbl span{background:color-mix(in srgb,var(--stage) 80%,transparent);padding:1px 6px;border-radius:4px}
+.lbl.r{flex-direction:row-reverse}
+.tip{position:absolute;z-index:4;max-width:280px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.tip b{display:block;font-family:var(--font-display);font-size:14px;margin-bottom:2px}
+.fallback{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--stage-ink)}
+@media (max-width:880px){
+  html,body{height:auto}
+  .app{height:auto;grid-template-columns:1fr;grid-template-rows:62vh auto}
+  .panel{border-left:0;border-top:1px solid var(--line);overflow:visible;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .tabs{top:env(safe-area-inset-top,0px)}
+  .hint{display:none}
+  .moves{grid-template-columns:1fr}
+  ul.rel li{grid-template-columns:1fr;gap:0}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="app">
+  <section class="stage" id="stage" aria-label="Modelo 3D del tórax y el pectoral mayor">
+    <canvas id="c"></canvas>
+    <div class="labels" id="labels"></div>
+    <div class="tip" id="tip" hidden></div>
+    <div class="views" role="group" aria-label="Vistas">
+      <button data-view="ant">Anterior</button>
+      <button data-view="obl">Oblicua</button>
+      <button data-view="lat">Lateral</button>
+      <button data-view="sup">Superior</button>
+      <button data-view="post">Posterior</button>
+    </div>
+    <p class="hint">Arrastra para girar · rueda o pellizco para acercar · toca una estructura para ver su nombre</p>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <aside class="panel">
+    <header>
+      <p class="eyebrow">Atlas interactivo · Pared anterior del tórax</p>
+      <h1>Músculo pectoral mayor <em>· m. pectoralis major</em></h1>
+      <p class="lede">Músculo en abanico que va del tórax al húmero. Sus fibras cambian de dirección según la porción y se cruzan antes de insertarse.</p>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="t-fibras" aria-selected="true" data-tab="fibras">Fibras</button>
+      <button role="tab" id="t-anatomia" aria-selected="false" data-tab="anatomia">Anatomía</button>
+      <button role="tab" id="t-movimiento" aria-selected="false" data-tab="movimiento">Movimiento</button>
+      <button role="tab" id="t-inervacion" aria-selected="false" data-tab="inervacion">Inervación</button>
+    </nav>
+
+    <!-- FIBRAS -->
+    <section class="tabpanel" id="p-fibras" role="tabpanel" aria-labelledby="t-fibras">
+      <p>Toca una porción para mostrarla u ocultarla. Las flechas del modelo marcan el sentido de las fibras, del origen a la inserción.</p>
+      <div class="parts">
+        <button class="part" data-part="clav" aria-pressed="true">
+          <span class="glyph"><svg viewBox="0 0 30 30"><path d="M5 8 L23 21" stroke="var(--clav)" stroke-width="3" stroke-linecap="round"/><path d="M17 22 L24 22 L22 15" fill="none" stroke="var(--clav)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>
+            <h3>Porción clavicular <small>fibras superiores</small></h3>
+            <dl class="facts">
+              <dt>Origen</dt><dd>Mitad medial de la cara anterior de la clavícula.</dd>
+              <dt>Dirección</dt><dd>Oblicua hacia abajo y lateral (inferolateral).</dd>
+              <dt>Inserción</dt><dd>Parte más distal de la cresta del tubérculo mayor, en la lámina anterior del tendón.</dd>
+              <dt>Acción</dt><dd>Flexión del brazo; ayuda en la aducción y la rotación medial.</dd>
+            </dl>
+          </span>
+        </button>
+        <button class="part" data-part="ster" aria-pressed="true">
+          <span class="glyph"><svg viewBox="0 0 30 30"><path d="M4 15 L24 15" stroke="var(--ster)" stroke-width="3" stroke-linecap="round"/><path d="M19 10 L25 15 L19 20" fill="none" stroke="var(--ster)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>
+            <h3>Porción esternocostal <small>fibras medias</small></h3>
+            <dl class="facts">
+              <dt>Origen</dt><dd>Cara anterior del manubrio y del cuerpo del esternón, y cartílagos costales 1.º a 6.º.</dd>
+              <dt>Dirección</dt><dd>Horizontal hacia lateral. Las más bajas empiezan a ascender.</dd>
+              <dt>Inserción</dt><dd>Parte media de la cresta. Las fibras inferiores pasan a la lámina posterior.</dd>
+              <dt>Acción</dt><dd>Aducción y rotación medial; extensión del brazo flexionado.</dd>
+            </dl>
+          </span>
+        </button>
+        <button class="part" data-part="abd" aria-pressed="true">
+          <span class="glyph"><svg viewBox="0 0 30 30"><path d="M5 22 L23 9" stroke="var(--abd)" stroke-width="3" stroke-linecap="round"/><path d="M16 8 L24 8 L23 15" fill="none" stroke="var(--abd)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>
+            <h3>Porción abdominal <small>fibras inferiores</small></h3>
+            <dl class="facts">
+              <dt>Origen</dt><dd>Aponeurosis del oblicuo externo y hoja anterior de la vaina del recto del abdomen.</dd>
+              <dt>Dirección</dt><dd>Oblicua hacia arriba y lateral (superolateral).</dd>
+              <dt>Inserción</dt><dd>La más proximal y profunda de la cresta, en la lámina posterior.</dd>
+              <dt>Acción</dt><dd>Aducción, descenso del hombro y extensión desde la flexión.</dd>
+            </dl>
+          </span>
+        </button>
+      </div>
+      <div class="note">
+        <strong>Torsión del tendón</strong>
+        <p>Las fibras se cruzan antes de llegar al húmero. Las que nacen más arriba (claviculares) se insertan más abajo y por delante; las que nacen más abajo (abdominales) se insertan más arriba y por detrás. El resultado es un tendón en forma de U de dos láminas, que da el borde redondeado del <b>pliegue axilar anterior</b>. Gira a vista lateral para verlo.</p>
+      </div>
+      <div class="stack">
+        <p class="group-title">Visualización</p>
+        <div class="toggles">
+          <label class="tg"><input type="checkbox" id="opt-arrows" checked> Flechas de dirección</label>
+          <label class="tg"><input type="checkbox" id="opt-flow" checked> Flujo origen → inserción</label>
+          <label class="tg"><input type="checkbox" id="opt-both"> Pectoral en ambos lados</label>
+          <label class="tg"><input type="checkbox" id="opt-labels" checked> Etiquetas</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANATOMÍA -->
+    <section class="tabpanel" id="p-anatomia" role="tabpanel" aria-labelledby="t-anatomia" hidden>
+      <p>El pectoral mayor se muestra en el lado derecho del cuerpo. El lado izquierdo queda descubierto para ver los huesos y el plano profundo.</p>
+      <div class="stack">
+        <p class="group-title">Huesos del tórax y del hombro</p>
+        <div class="toggles" id="tg-bones"></div>
+      </div>
+      <div class="stack">
+        <p class="group-title">Músculos relacionados</p>
+        <div class="toggles" id="tg-muscles"></div>
+      </div>
+      <div class="stack">
+        <p class="group-title">Vasos</p>
+        <div class="toggles" id="tg-vessels"></div>
+      </div>
+      <div class="range">
+        <label for="opt-opacity">Opacidad del pectoral mayor</label>
+        <input type="range" id="opt-opacity" min="0" max="100" value="100">
+        <output id="out-opacity">100 %</output>
+      </div>
+      <div class="stack">
+        <h2>Relaciones</h2>
+        <ul class="rel">
+          <li><b>Surco deltopectoral</b><span>Separa el pectoral mayor del deltoides. Por él sube la vena cefálica hacia el triángulo clavipectoral.</span></li>
+          <li><b>Plano profundo</b><span>Pectoral menor y subclavio, envueltos por la fascia clavipectoral. El pectoral menor cruza por delante de la arteria axilar.</span></li>
+          <li><b>Pared de la axila</b><span>El pectoral mayor forma la pared anterior y su borde inferior el pliegue axilar anterior. El serrato anterior forma la pared medial y el dorsal ancho el pliegue posterior.</span></li>
+          <li><b>Sinergistas</b><span>Dorsal ancho y redondo mayor (aducción y rotación medial); deltoides anterior y coracobraquial (flexión).</span></li>
+          <li><b>Antagonistas</b><span>Deltoides medio y supraespinoso (abducción); infraespinoso y redondo menor (rotación lateral).</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- MOVIMIENTO -->
+    <section class="tabpanel" id="p-movimiento" role="tabpanel" aria-labelledby="t-movimiento" hidden>
+      <p>Elige un movimiento. Las porciones que trabajan se iluminan; las que no, se atenúan. Los sinergistas aparecen en gris.</p>
+      <div class="moves" id="moves"></div>
+      <div class="player">
+        <button class="btn" id="play">Pausar</button>
+        <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Progreso del movimiento">
+      </div>
+      <div class="phase" id="phase"><i></i><span>Fase concéntrica: el músculo se acorta</span></div>
+      <div class="stack">
+        <h2 id="mv-title"></h2>
+        <p id="mv-text"></p>
+        <div class="chips" id="mv-chips"></div>
+        <p class="mono" id="mv-syn" style="color:var(--muted)"></p>
+      </div>
+      <div class="stack">
+        <p class="group-title">Longitud de las fibras respecto al reposo</p>
+        <div class="bars" id="bars"></div>
+        <p style="font-size:12px;color:var(--muted)">Por debajo de 100 % la porción se acorta: está trabajando en contracción concéntrica.</p>
+      </div>
+      <div class="note"><strong>Con el brazo fijo</strong><p>Si el húmero está fijo, por ejemplo al apoyar las manos, el pectoral mayor tira del tórax: eleva las costillas y actúa como músculo accesorio de la inspiración forzada. También ayuda a elevar el tronco al trepar.</p></div>
+    </section>
+
+    <!-- INERVACIÓN -->
+    <section class="tabpanel" id="p-inervacion" role="tabpanel" aria-labelledby="t-inervacion" hidden>
+      <p>Las fibras del pectoral mayor se colorean según el nervio que las inerva. Ambos nervios salen del plexo braquial, a la altura de los cordones.</p>
+      <div class="nerve">
+        <h3><i style="background:var(--nlat)"></i>Nervio pectoral lateral</h3>
+        <p class="mono">C5 · C6 · C7 — cordón lateral</p>
+        <ul>
+          <li>Pasa por encima del pectoral menor y perfora la fascia clavipectoral junto a la arteria toracoacromial.</li>
+          <li>Inerva la porción clavicular y la parte superior de la esternocostal.</li>
+        </ul>
+      </div>
+      <div class="nerve">
+        <h3><i style="background:var(--nmed)"></i>Nervio pectoral medial</h3>
+        <p class="mono">C8 · T1 — cordón medial</p>
+        <ul>
+          <li>Atraviesa el pectoral menor, al que inerva, y llega a la cara profunda del pectoral mayor.</li>
+          <li>Inerva la parte inferior de la porción esternocostal y la porción abdominal.</li>
+        </ul>
+      </div>
+      <div class="nerve">
+        <h3><i style="background:var(--plexo)"></i>Asa pectoral</h3>
+        <p style="font-size:13px">Rama comunicante entre ambos nervios que pasa por delante de la arteria axilar. Por eso parte de las fibras del pectoral lateral también llegan al pectoral menor.</p>
+      </div>
+      <div class="note"><strong>Por qué los nombres parecen al revés</strong><p>Se nombran por el cordón del que salen, no por su posición. En el tórax, el nervio pectoral lateral queda más medial que el pectoral medial.</p></div>
+      <div class="stack">
+        <h2>Inervación segmentaria</h2>
+        <table class="seg">
+          <thead><tr><th>Porción</th><th>Segmentos</th><th>Nervio</th></tr></thead>
+          <tbody>
+            <tr><td>Clavicular</td><td class="mono">C5–C6</td><td>Pectoral lateral</td></tr>
+            <tr><td>Esternocostal superior</td><td class="mono">C6–C7</td><td>Pectoral lateral</td></tr>
+            <tr><td>Esternocostal inferior y abdominal</td><td class="mono">C7–C8–T1</td><td>Pectoral medial</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="stack">
+        <h2>Exploración</h2>
+        <p style="font-size:13px">Con la mano apoyada en la cadera, el paciente empuja hacia dentro contra resistencia y se palpan ambas porciones. Para la clavicular, se pide flexionar el brazo a 90° y aducirlo contra resistencia. Una lesión debilita la aducción y la rotación medial, y aplana el pliegue axilar anterior.</p>
+      </div>
+      <div class="toggles">
+        <label class="tg"><input type="checkbox" id="opt-bynerve" checked> Colorear fibras por nervio</label>
+        <label class="tg"><input type="checkbox" id="opt-pulse" checked> Impulso nervioso</label>
+      </div>
+      <div class="range">
+        <label for="opt-opacity2">Transparencia del músculo</label>
+        <input type="range" id="opt-opacity2" min="0" max="100" value="45">
+        <output id="out-opacity2">45 %</output>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function(){
+'use strict';
+const stageEl = document.getElementById('stage');
+if(!window.THREE || !THREE.OrbitControls){
+  const f=document.createElement('div'); f.className='fallback'; f.textContent='No se pudo cargar el motor 3D. Revisa tu conexión y recarga la página.'; stageEl.appendChild(f); return;
+}
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const V = (x,y,z)=>new THREE.Vector3(x,y,z);
+const D2R = Math.PI/180;
+const SIDES = [-1, 1]; // -1 = lado derecho del paciente (izquierda en pantalla), +1 = lado izquierdo
+
+/* ---------- Escena ---------- */
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 1, 600);
+camera.position.set(0,-6,92);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.target.set(0,-11,0); controls.enableDamping = true; controls.minDistance = 22; controls.maxDistance = 200;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.75));
+const key = new THREE.DirectionalLight(0xffffff, 0.75); key.position.set(-30,40,60); scene.add(key);
+const rim = new THREE.DirectionalLight(0xbfd8ff, 0.35); rim.position.set(40,10,-50); scene.add(rim);
+const fill = new THREE.DirectionalLight(0xffffff, 0.25); fill.position.set(30,-20,40); scene.add(fill);
+
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function applyTheme(){ scene.background = new THREE.Color(cssVar('--stage') || '#cfd7de'); }
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- Materiales ---------- */
+function mat(color, o={}){ return new THREE.MeshStandardMaterial(Object.assign({color, roughness:.62, metalness:0}, o)); }
+const COL = {clav:0xe0892f, ster:0xd23f5a, abd:0x7d55c9, nlat:0x1f9bb5, nmed:0xcf4f97};
+const M = {
+  bone: mat(0xe8dfc8,{roughness:.85}), cart: mat(0x9fc6d2,{roughness:.45}),
+  clav: mat(COL.clav), ster: mat(COL.ster), abd: mat(COL.abd),
+  fnlat: mat(COL.nlat), fnmed: mat(COL.nmed),
+  muscle: mat(0xa8665c,{roughness:.7}), deep: mat(0xb9786b,{roughness:.7}), syn: mat(0x8d9aa6,{roughness:.7}),
+  plexo: mat(0xe2b11c,{emissive:0x3a2a00, roughness:.4}), nlat: mat(COL.nlat,{emissive:0x05303a, roughness:.4}), nmed: mat(COL.nmed,{emissive:0x3a0a26, roughness:.4}),
+  art: mat(0xc8343a,{roughness:.45}), vein: mat(0x3d5fb0,{roughness:.45}), arrow: null
+};
+function setOpacity(m,o){ m.opacity=o; m.transparent=o<0.999; m.depthWrite=o>=0.999; m.needsUpdate=true; }
+
+/* ---------- Utilidades ---------- */
+function curveOf(pts){ return new THREE.CatmullRomCurve3(pts,false,'centripetal'); }
+function tubeGeo(pts,r,seg=40,rad=8){ const c=curveOf(pts); return [new THREE.TubeGeometry(c,seg,r,rad,false), c]; }
+function tube(pts,r,material,info,parent,seg,rad){ const [g,c]=tubeGeo(pts,r,seg,rad); const m=new THREE.Mesh(g,material); m.userData.info=info; m.userData.curve=c; parent.add(m); return m; }
+function sphere(p,r,material,info,parent){ const m=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),material); m.position.copy(p); m.userData.info=info; parent.add(m); return m; }
+const tmp = new THREE.Vector3();
+function wp(o){ return o.getWorldPosition(new THREE.Vector3()); }
+function marker(parent,p){ const o=new THREE.Object3D(); o.position.copy(p); parent.add(o); return o; }
+function interp(ys,vs,y){ if(y>=ys[0]) return vs[0]; for(let i=1;i<ys.length;i++){ if(y>=ys[i]){ const t=(ys[i-1]-y)/(ys[i-1]-ys[i]); return vs[i-1]+(vs[i]-vs[i-1])*t; } } return vs[vs.length-1]; }
+// Contorno elíptico aproximado de la pared torácica a cada altura
+const TH_Y=[4,0,-4,-10,-16,-22,-28,-36,-46], TH_A=[6,9,11.3,12.8,13.2,12.6,11.8,11.6,11.6], TH_B=[6.5,8.8,9.4,9.6,9.5,9.0,8.5,8.2,8.0];
+function pushFromThorax(p,extra){ const a=interp(TH_Y,TH_A,p.y)+extra, b=interp(TH_Y,TH_B,p.y)+extra; const r=Math.hypot(p.x/a,p.z/b); if(r>1e-4 && r<1){ p.x/=r; p.z/=r; } return p; }
+
+/* ---------- Grupos ---------- */
+const G = {};
+['sternum','ribs','cart','clavicle','scapula','arm','spine','pec','pecMinor','subclavius','deltoid','serratus','latissimus','coraco','abdominal','cephalic','artery','plexus','nerves','arrows','flow'].forEach(k=>{ G[k]=new THREE.Group(); scene.add(G[k]); });
+const PEC = {}; // PEC[side][part] = Group
+SIDES.forEach(s=>{ PEC[s]={}; ['clav','ster','abd'].forEach(p=>{ const g=new THREE.Group(); G.pec.add(g); PEC[s][p]=g; }); });
+
+/* ---------- Información para el cursor ---------- */
+const INFO = {
+  clav:['Pectoral mayor · porción clavicular','Fibras superiores. De la mitad medial de la clavícula, hacia abajo y lateral. Flexionan el brazo.'],
+  ster:['Pectoral mayor · porción esternocostal','Fibras medias. Del esternón y los cartílagos 1.º–6.º, horizontales hacia lateral. Aducen y rotan en medial.'],
+  abd:['Pectoral mayor · porción abdominal','Fibras inferiores. De la aponeurosis del oblicuo externo, hacia arriba y lateral. Se insertan las más altas y profundas.'],
+  clavicula:['Clavícula','Su mitad medial da origen a la porción clavicular. Por debajo se inserta el subclavio.'],
+  manubrio:['Manubrio del esternón','Origen de las fibras esternocostales superiores. Se articula con la clavícula y el 1.er cartílago costal.'],
+  cuerpo:['Cuerpo del esternón','Origen de la mayor parte de la porción esternocostal. Recibe los cartílagos 2.º a 7.º.'],
+  xifoides:['Apófisis xifoides','Extremo inferior del esternón. A su lado nacen las fibras más bajas del pectoral mayor y el recto del abdomen.'],
+  costilla:['Costilla','Las costillas 3.ª a 5.ª dan origen al pectoral menor; las 1.ª a 8.ª o 9.ª, al serrato anterior.'],
+  cartilago:['Cartílago costal','Los cartílagos 1.º a 6.º dan origen a parte de la porción esternocostal.'],
+  escapula:['Escápula','Su borde medial recibe el serrato anterior; la coracoides, el pectoral menor.'],
+  acromion:['Acromion y espina de la escápula','Origen de las fibras medias y posteriores del deltoides.'],
+  coracoides:['Apófisis coracoides','Inserción del pectoral menor; origen del coracobraquial y de la cabeza corta del bíceps.'],
+  humero:['Húmero','El pectoral mayor se inserta en la cresta del tubérculo mayor (labio lateral del surco intertubercular).'],
+  antebrazo:['Antebrazo','Con el codo flexionado permite ver la rotación medial del brazo.'],
+  columna:['Columna vertebral','Las vértebras torácicas articulan con las costillas. Las apófisis espinosas dan origen al dorsal ancho.'],
+  pecMenor:['Pectoral menor','De las costillas 3.ª–5.ª a la apófisis coracoides. Plano profundo; lo atraviesa el nervio pectoral medial.'],
+  subclavio:['Subclavio','De la 1.ª costilla a la cara inferior de la clavícula. Lo envuelve la fascia clavipectoral.'],
+  deltoides:['Deltoides','Su borde anterior limita con el pectoral mayor en el surco deltopectoral. Sinergista en la flexión.'],
+  serrato:['Serrato anterior','De las costillas 1.ª–9.ª al borde medial de la escápula. Pared medial de la axila.'],
+  dorsal:['Dorsal ancho','De la columna toracolumbar y la cresta ilíaca al suelo del surco intertubercular. Forma el pliegue axilar posterior.'],
+  coraco:['Coracobraquial','De la coracoides a la cara medial del húmero. Sinergista en la flexión y la aducción.'],
+  biceps:['Bíceps braquial · cabeza corta','Nace en la coracoides. Ayuda en la flexión del brazo.'],
+  recto:['Recto del abdomen','Su vaina anterior da origen a la porción abdominal del pectoral mayor.'],
+  oblicuo:['Oblicuo externo del abdomen','Su aponeurosis da origen a la porción abdominal del pectoral mayor.'],
+  cefalica:['Vena cefálica','Recorre el surco deltopectoral y perfora la fascia clavipectoral para drenar en la vena axilar.'],
+  arteria:['Arteria axilar','Pasa entre los cordones del plexo braquial, por detrás del pectoral menor.'],
+  plexo:['Plexo braquial','Raíces C5–T1 → troncos → divisiones → cordones. De los cordones lateral y medial salen los nervios pectorales.'],
+  nLat:['Nervio pectoral lateral (C5–C7)','Del cordón lateral. Perfora la fascia clavipectoral e inerva la porción clavicular y la esternocostal superior.'],
+  nMed:['Nervio pectoral medial (C8–T1)','Del cordón medial. Atraviesa el pectoral menor e inerva la esternocostal inferior y la abdominal.'],
+  asa:['Asa pectoral','Comunicación entre los nervios pectorales lateral y medial, por delante de la arteria axilar.']
+};
+
+/* ---------- Esternón ---------- */
+function slab(pts2, depth, z, material, info, parent){
+  const sh = new THREE.Shape(pts2.map(p=>new THREE.Vector2(p[0],p[1])));
+  const g = new THREE.ExtrudeGeometry(sh,{depth, bevelEnabled:true, bevelThickness:.3, bevelSize:.3, bevelSegments:2, curveSegments:8});
+  const m = new THREE.Mesh(g,material); m.position.z=z; m.userData.info=info; parent.add(m); return m;
+}
+slab([[-2.6,0],[-0.9,0.1],[0,-0.5],[0.9,0.1],[2.6,0],[2.2,-2],[1.6,-4.7],[-1.6,-4.7],[-2.2,-2]],1.2,8.2,M.bone,'manubrio',G.sternum);
+slab([[-1.6,-5.0],[1.6,-5.0],[2.0,-9],[2.2,-13],[1.6,-15],[-1.6,-15],[-2.2,-13],[-2.0,-9]],1.1,8.25,M.bone,'cuerpo',G.sternum);
+slab([[-1.0,-15.3],[1.0,-15.3],[0.5,-17.6],[0,-18.2],[-0.5,-17.6]],0.7,8.35,M.bone,'xifoides',G.sternum);
+
+/* ---------- Costillas y cartílagos ---------- */
+const RA=[5.2,7.8,9.8,11.2,12.2,12.8,13.1,13.2,13.0,12.4,11.4,10.0];
+const RB=[5.8,7.4,8.2,8.7,9.0,9.2,9.3,9.3,9.1,8.7,8.1,7.4];
+const TE=[.80,.78,.76,.74,.72,.70,.69,.68,.67,.65,.52,.42].map(v=>v*Math.PI);
+const YE=[-1.6,-5.6,-8.6,-11.2,-13.6,-15.8,-17.8,-19.8,-21.4,-22.6,-23.2,-23.0];
+const YF=[-1.4,-4.8,-7.0,-9.2,-11.2,-13.0,-14.6];
+const YB=i=>2.5-i*2.1, TH0=0.06*Math.PI;
+function ribP(s,i,th){ const f=Math.max(0,Math.min(1,(th-TH0)/(TE[i]-TH0))); const e=Math.pow(f,1.25); return V(s*RA[i]*Math.sin(th), YB(i)+(YE[i]-YB(i))*e, -RB[i]*Math.cos(th)); }
+SIDES.forEach(s=>{
+  for(let i=0;i<12;i++){
+    const pts=[]; for(let k=0;k<=16;k++){ pts.push(ribP(s,i,TH0+(TE[i]-TH0)*k/16)); }
+    tube(pts, i===0?0.62:0.5, M.bone, 'costilla', G.ribs, 64, 7);
+    if(i<10){
+      const E=pts[16]; let T;
+      if(i<7) T=V(s*1.9,YF[i],9.0); else T=[V(s*3.6,-15.9,8.6),V(s*5.6,-17.6,7.7),V(s*7.4,-19.0,6.5)][i-7];
+      const mid=E.clone().lerp(T,.5); mid.z+=0.6; if(i>=5) mid.y-=0.6;
+      tube([E,mid,T],0.42,M.cart,'cartilago',G.cart,20,7);
+    }
+  }
+});
+/* ---------- Columna ---------- */
+for(let i=0;i<12;i++){ const y=YB(i)-0.3; const b=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,1.5,16),M.bone); b.position.set(0,y,-7.6); b.userData.info='columna'; G.spine.add(b);
+  const sp=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.9,3),M.bone); sp.position.set(0,y-0.6,-10.2); sp.rotation.x=-0.5; sp.userData.info='columna'; G.spine.add(sp); }
+for(let i=0;i<5;i++){ const y=3.9+i*1.5; const b=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,1.1,16),M.bone); b.position.set(0,y,-6.6); b.userData.info='columna'; G.spine.add(b); }
+for(let i=0;i<5;i++){ const y=-23.5-i*2.6; const b=new THREE.Mesh(new THREE.CylinderGeometry(2.0,2.0,2.0,16),M.bone); b.position.set(0,y,-6.8); b.userData.info='columna'; G.spine.add(b);
+  const sp=new THREE.Mesh(new THREE.BoxGeometry(0.8,1.2,3),M.bone); sp.position.set(0,y,-9.6); sp.userData.info='columna'; G.spine.add(sp); }
+
+/* ---------- Clavícula, escápula ---------- */
+const CLAV={}, CT={}, P={};
+SIDES.forEach(s=>{
+  const pts=[V(s*1.9,0.4,8.9),V(s*4.5,0.9,9.1),V(s*8,1.3,7.6),V(s*11,1.5,4.8),V(s*13.6,1.8,2.4),V(s*15.4,1.9,1.3)];
+  const m=tube(pts,0.78,M.bone,'clavicula',G.clavicle,48,10); CLAV[s]=m.userData.curve;
+  // escápula
+  const sh=[[6,-0.8],[10,-1.2],[12.8,-3],[12.5,-5.5],[9,-17],[6.5,-14],[5.6,-6]].map(p=>new THREE.Vector2(s*p[0],p[1]));
+  const g=new THREE.ExtrudeGeometry(new THREE.Shape(s<0?sh.reverse():sh),{depth:.6,bevelEnabled:true,bevelThickness:.2,bevelSize:.2,bevelSegments:1});
+  const pos=g.attributes.position; for(let k=0;k<pos.count;k++){ const x=pos.getX(k); pos.setZ(k, pos.getZ(k)-10.6+(Math.abs(x)-5.5)*0.75); } g.computeVertexNormals();
+  const sc=new THREE.Mesh(g,M.bone); sc.userData.info='escapula'; G.scapula.add(sc);
+  const gl=sphere(V(s*14.3,-3.2,-1.6),1.4,M.bone,'escapula',G.scapula); gl.scale.set(.5,1.2,1);
+  tube([V(s*12.6,-3.2,-5.2),V(s*13.6,-3.2,-3.0),V(s*14.3,-3.2,-1.6)],0.9,M.bone,'escapula',G.scapula,10,8);
+  tube([V(s*6,-4,-10.2),V(s*10,-2,-8),V(s*13,-0.5,-5.6),V(s*15.4,1.2,-2),V(s*15.8,1.6,0.9)],0.6,M.bone,'acromion',G.scapula,32,8);
+  CT[s]=V(s*11.4,-1.9,3.8);
+  tube([V(s*13,-1.8,-3.5),V(s*12.5,-0.6,-0.5),V(s*11.8,-1.2,2.8),CT[s]],0.55,M.bone,'coracoides',G.scapula,20,8);
+  P[s]=V(s*16.4,-3.2,0.2);
+});
+
+/* ---------- Brazo (húmero + antebrazo) ---------- */
+const ARM={};
+SIDES.forEach(s=>{
+  const piv=new THREE.Group(); piv.position.copy(P[s]); G.arm.add(piv);
+  sphere(V(0,0,0),2.3,M.bone,'humero',piv);
+  sphere(V(s*1.7,0.3,0.4),1.3,M.bone,'humero',piv);
+  sphere(V(s*0.4,-0.6,1.8),0.8,M.bone,'humero',piv);
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.0,28,18),M.bone); sh.position.set(s*1.0,-15,0); sh.userData.info='humero'; piv.add(sh);
+  const cond=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,4.6,16),M.bone); cond.rotation.z=Math.PI/2; cond.position.set(s*1.0,-29.4,0.2); cond.userData.info='humero'; piv.add(cond);
+  const fore=new THREE.Group(); fore.position.set(s*1.0,-29.6,0.2); piv.add(fore);
+  tube([V(s*1.2,0,0.3),V(s*1.0,-12,0.4),V(s*0.9,-23,0.2)],0.62,M.bone,'antebrazo',fore,16,8);
+  tube([V(-s*0.9,0.4,-0.3),V(-s*0.7,-12,-0.1),V(-s*0.6,-23,0)],0.6,M.bone,'antebrazo',fore,16,8);
+  const hand=new THREE.Mesh(new THREE.BoxGeometry(4,7,1.3),M.bone); hand.position.set(s*0.2,-27.5,0.2); hand.userData.info='antebrazo'; fore.add(hand);
+  const mk={
+    top: marker(piv,V(s*1.0,-2,0)), elbow: marker(piv,V(s*1.0,-29.4,0)),
+    delt: marker(piv,V(s*2.1,-14,0.3)), lat: marker(piv,V(s*1.1,-5.6,1.2)),
+    coraco: marker(piv,V(-s*0.05,-15,0.3)), bic1: marker(piv,V(s*1.4,-9,2.4)), bic2: marker(piv,V(s*1.3,-21,2.6)),
+    bic3: marker(fore,V(s*0.9,-3,1.0)), ceph1: marker(piv,V(s*2.0,-18,2.2)), ceph2: marker(piv,V(s*1.2,-7,3.4)),
+    label: marker(piv,V(s*2.4,-12,1.2))
+  };
+  ARM[s]={piv,fore,mk};
+});
+
+/* ---------- Músculos dinámicos ---------- */
+const dyn=[];
+function addDyn(build,r,material,info,parent,seg=40,rad=7){ const [g,c]=tubeGeo(build(),r,seg,rad); const mesh=new THREE.Mesh(g,material); mesh.userData.info=info; mesh.userData.curve=c; parent.add(mesh); const d={mesh,build,r,seg,rad,parent}; dyn.push(d); return d; }
+function visibleChain(o){ while(o){ if(!o.visible) return false; o=o.parent; } return true; }
+function rebuildDyn(force){
+  scene.updateMatrixWorld(true);
+  for(const d of dyn){ if(!force && !visibleChain(d.parent)) continue;
+    const [g,c]=tubeGeo(d.build(),d.r,d.seg,d.rad); d.mesh.geometry.dispose(); d.mesh.geometry=g; d.mesh.userData.curve=c; }
+}
+function pushFromHead(s,p,r){ const v=p.clone().sub(P[s]); const L=v.length(); if(L<r){ p.copy(P[s]).add(v.multiplyScalar(r/Math.max(L,1e-3))); } return p; }
+function pushFromArm(s,p,r){ const a=wp(ARM[s].mk.top), b=wp(ARM[s].mk.elbow); const ab=b.clone().sub(a); const t=Math.max(0,Math.min(1,p.clone().sub(a).dot(ab)/ab.lengthSq())); const c=a.add(ab.multiplyScalar(t)); const d=p.clone().sub(c); const L=d.length(); if(L<r) p.copy(c).add(d.multiplyScalar(r/Math.max(L,1e-3))); return p; }
+
+const FIBERS=[]; // {d, part, side, nerve}
+function pecFiber(s,part,O,ins,lam){
+  const build=()=>{ const I=wp(ins); const pts=[O.clone()]; const n=7;
+    for(let k=1;k<n;k++){ const t=k/n; const p=O.clone().lerp(I,t); pushFromThorax(p, 1.7*(1-t)+0.55); if(t>0.6){ p.z+=lam*(t-0.6)*2.2; } pushFromHead(s,p,2.9); pts.push(p); }
+    pts.push(I); return pts; };
+  return build;
+}
+SIDES.forEach(s=>{
+  const piv=ARM[s].piv;
+  // porción clavicular
+  const nC=9; for(let k=0;k<nC;k++){ const u=0.04+0.40*k/(nC-1); const O=CLAV[s].getPoint(u).add(V(0,-0.5,0.55));
+    const ins=marker(piv,V(s*1.55,-11.0+2.0*k/(nC-1),1.2));
+    FIBERS.push({part:'clav',side:s,nerve:'lat',d:addDyn(pecFiber(s,'clav',O,ins,0.9),0.44,M.clav,'clav',PEC[s].clav)}); }
+  // porción esternocostal
+  const nS=15; for(let k=0;k<nS;k++){ const f=k/(nS-1); const y=-1.4-14*f; const O=V(s*(0.9+0.6*f),y,9.8);
+    const ins=marker(piv,V(s*1.55,-9.0+2.6*f,1.0-0.45*f));
+    FIBERS.push({part:'ster',side:s,nerve:f<0.5?'lat':'med',d:addDyn(pecFiber(s,'ster',O,ins,0.3-0.6*f),0.38,M.ster,'ster',PEC[s].ster)}); }
+  [[4.4,-12.6],[6.0,-14.6]].forEach((c,k)=>{ const O=pushFromThorax(V(s*c[0],c[1],8),0.2); const ins=marker(piv,V(s*1.55,-6.7+0.2*k,0.55));
+    FIBERS.push({part:'ster',side:s,nerve:'med',d:addDyn(pecFiber(s,'ster',O,ins,-0.4),0.38,M.ster,'ster',PEC[s].ster)}); });
+  // porción abdominal
+  const nA=7; for(let k=0;k<nA;k++){ const f=k/(nA-1); const O=pushFromThorax(V(s*(2.6+5.2*f),-17.0-2.4*f+ (f>0.5?0.8:0),8),0.25);
+    const ins=marker(piv,V(s*1.55,-6.1+1.6*f,0.45));
+    FIBERS.push({part:'abd',side:s,nerve:'med',d:addDyn(pecFiber(s,'abd',O,ins,-0.7),0.42,M.abd,'abd',PEC[s].abd)}); }
+
+  // deltoides
+  const dO=[]; for(let k=0;k<6;k++) dO.push(CLAV[s].getPoint(0.68+0.3*k/5).add(V(0,0.2,0.3)));
+  dO.push(V(s*16.4,1.6,0.6),V(s*16.8,1.2,-1.0),V(s*16.3,0.9,-2.6),V(s*14.8,0.2,-4.8),V(s*12.8,-0.6,-7.0));
+  dO.forEach(O=>addDyn(()=>{ const I=wp(ARM[s].mk.delt); const pts=[O.clone()]; for(let k=1;k<6;k++){ const t=k/6; const p=O.clone().lerp(I,t); pushFromHead(s,p,3.4+0.4*Math.sin(Math.PI*t)); pushFromArm(s,p,1.5+2.0*Math.sin(Math.PI*t)); pts.push(p);} pts.push(I); return pts; },0.55,M.muscle,'deltoides',G.deltoid));
+  // dorsal ancho
+  const lO=[V(s*2,-15,-11.5),V(s*2,-19,-11.6),V(s*2.2,-23,-10.8),V(s*2.6,-27,-10.4),V(s*3.2,-31,-10),V(s*7,-34,-8.6),V(s*10.5,-33,-6),V(s*11.6,-26,-4.6)];
+  lO.forEach(O=>addDyn(()=>{ const I=wp(ARM[s].mk.lat); const AX=V(s*13.8,-9.5,-3.6).lerp(I,0.3); const pts=[O.clone()];
+    [0.35,0.7].forEach(t=>{ pts.push(pushFromThorax(O.clone().lerp(AX,t),0.8)); }); pts.push(AX, AX.clone().lerp(I,0.55).add(V(0,0,-0.6)), I); return pts; },0.5,M.muscle,'dorsal',G.latissimus));
+  // coracobraquial y bíceps (cabeza corta)
+  addDyn(()=>{ const I=wp(ARM[s].mk.coraco); const m=CT[s].clone().lerp(I,.5); pushFromArm(s,m,1.4); return [CT[s].clone(),m,I]; },0.55,M.muscle,'coraco',G.coraco);
+  addDyn(()=>[CT[s].clone(), pushFromArm(s,wp(ARM[s].mk.bic1),1.9), pushFromArm(s,wp(ARM[s].mk.bic2),2.2), wp(ARM[s].mk.bic3)],0.6,M.muscle,'biceps',G.coraco);
+  // vena cefálica
+  addDyn(()=>[wp(ARM[s].mk.ceph1), wp(ARM[s].mk.ceph2), V(s*14.0,-2.6,5.2), V(s*12.2,-1.4,4.6), V(s*11.2,-2.4,2.6)],0.3,M.vein,'cefalica',G.cephalic,24,6);
+});
+
+/* ---------- Músculos estáticos ---------- */
+SIDES.forEach(s=>{
+  // pectoral menor (costillas 3–5 → coracoides)
+  [2,3,4].forEach(i=>{ [-0.45,0.45].forEach(dy=>{ const R=ribP(s,i,TE[i]-0.05*Math.PI); R.y+=dy; R.z+=0.4;
+    const m1=pushFromThorax(R.clone().lerp(CT[s],0.35),0.7), m2=pushFromThorax(R.clone().lerp(CT[s],0.7),0.6);
+    tube([R,m1,m2,CT[s].clone().add(V(0,-0.4,0.2))],0.46,M.deep,'pecMenor',G.pecMinor,28,7); }); });
+  // subclavio
+  tube([V(s*3.2,-1.3,5.3),V(s*6,-0.1,6.6),V(s*9.2,0.6,6.2)],0.5,M.deep,'subclavio',G.subclavius,18,8);
+  // serrato anterior
+  for(let i=0;i<9;i++){ const R=ribP(s,i,Math.min(TE[i],0.6*Math.PI)); const Mb = i<4? V(s*6.0,-1.5-i*1.6,-9.5) : V(s*6.3,-8,-9.4).lerp(V(s*8.6,-16.3,-8.2),(i-4)/4);
+    const a=pushFromThorax(R.clone().lerp(Mb,0.33),0.45), b=pushFromThorax(R.clone().lerp(Mb,0.66),0.45);
+    tube([R,a,b,Mb],0.5,M.muscle,'serrato',G.serratus,30,7); }
+  // recto del abdomen
+  for(let k=0;k<4;k++){ const x=s*(1.3+1.4*k); const top=V(x,-13.8-k*0.9,9.2); const pts=[top]; for(let j=1;j<=5;j++){ const y=top.y+(-44-top.y)*j/5; pts.push(pushFromThorax(V(x*(1-0.35*j/5),y,8),0.35)); }
+    tube(pts,0.62,M.muscle,'recto',G.abdominal,40,7); }
+  // oblicuo externo
+  for(let i=4;i<12;i++){ const R=ribP(s,i,Math.min(TE[i],0.5*Math.PI)).add(V(0,0,0)); pushFromThorax(R,0.25);
+    const E=pushFromThorax(V(s*(6.5+(i-4)*0.6),-26-(i-4)*2.0,6),0.3); const m=pushFromThorax(R.clone().lerp(E,.5),0.4);
+    tube([R,m,E],0.42,M.muscle,'oblicuo',G.abdominal,22,6); }
+  // arteria axilar
+  tube([V(s*3.8,2.6,-0.8),V(s*7.5,0.4,1.2),V(s*10.8,-2.8,1.8),V(s*13.2,-5.2,1.6),V(s*15,-7.6,1.4)],0.48,M.art,'arteria',G.artery,36,8);
+});
+
+/* ---------- Plexo braquial y nervios pectorales ---------- */
+const NERVES=[]; // {mesh, kind}
+function nerve(pts,r,material,info,kind){ const m=tube(pts,r,material,info,G.nerves,36,7); NERVES.push({mesh:m,kind}); return m; }
+SIDES.forEach(s=>{
+  const X=x=>s*x;
+  const roots=[7.4,6.0,4.6,3.0,1.6];
+  const sup=V(X(6.8),4.6,-3.2), mid=V(X(7.0),3.4,-3.4), inf=V(X(7.0),2.0,-3.6);
+  const tr=[sup,sup,mid,inf,inf];
+  roots.forEach((y,i)=>{ const o=V(X(1.9),y,-6.6); nerve([o,V(X(4.2),y-0.5,-5.2),tr[i]],0.32,M.plexo,'plexo','plexo'); });
+  nerve([sup,V(X(8.6),2.0,-1.0),V(X(10.2),-0.6,1.0),V(X(11.6),-2.4,2.0),V(X(14.0),-5.6,2.6)],0.36,M.plexo,'plexo','plexo'); // cordón lateral
+  nerve([mid,V(X(8.6),2.0,-1.0)],0.3,M.plexo,'plexo','plexo');
+  nerve([mid,V(X(9.2),0.6,-1.6),V(X(11.6),-3.0,0.4),V(X(14.2),-6.0,0.4)],0.36,M.plexo,'plexo','plexo'); // cordón posterior
+  nerve([sup,V(X(8.2),2.6,-2.6),V(X(9.2),0.6,-1.6)],0.28,M.plexo,'plexo','plexo');
+  nerve([inf,V(X(8.4),1.4,-2.4),V(X(9.2),0.6,-1.6)],0.28,M.plexo,'plexo','plexo');
+  nerve([inf,V(X(9.0),0.0,-1.0),V(X(10.8),-3.6,1.2),V(X(13.4),-6.6,1.6)],0.36,M.plexo,'plexo','plexo'); // cordón medial
+  // nervio pectoral lateral
+  const bl=V(X(7.8),-1.6,7.0);
+  nerve([V(X(10.4),-0.9,1.3),V(X(10.0),-0.6,3.2),V(X(9.0),-0.9,5.4),bl],0.3,M.nlat,'nLat','lat');
+  [[5.2,-0.6,8.0],[5.6,-3.6,8.6],[7.4,-5.4,8.0]].forEach(e=>nerve([bl,bl.clone().lerp(V(X(e[0]),e[1],e[2]),.5).add(V(0,0,0.3)),V(X(e[0]),e[1],e[2])],0.2,M.nlat,'nLat','lat'));
+  // nervio pectoral medial
+  const bm=V(X(8.8),-8.4,6.9);
+  nerve([V(X(11.0),-4.3,1.4),V(X(10.6),-5.6,3.2),V(X(10.0),-6.6,5.2),bm],0.3,M.nmed,'nMed','med');
+  [[7.2,-11.2,8.0],[5.8,-13.4,8.4],[8.4,-13.2,7.2],[6.8,-16.4,7.6]].forEach(e=>nerve([bm,bm.clone().lerp(V(X(e[0]),e[1],e[2]),.5).add(V(0,0,0.3)),V(X(e[0]),e[1],e[2])],0.2,M.nmed,'nMed','med'));
+  nerve([V(X(10.2),-6.2,4.6),V(X(9.6),-6.0,5.8)],0.18,M.nmed,'nMed','med');
+  // asa pectoral
+  nerve([V(X(10.4),-1.2,1.8),V(X(11.0),-2.6,3.4),V(X(11.2),-3.8,3.2),V(X(10.9),-4.8,2.6)],0.2,M.plexo,'asa','asa');
+});
+
+/* ---------- Flechas de dirección ---------- */
+function fatArrow(a,b,color){ const g=new THREE.Group(); const dir=b.clone().sub(a); const L=dir.length(); dir.normalize();
+  const m=new THREE.MeshStandardMaterial({color:new THREE.Color(color).lerp(new THREE.Color(0xffffff),.45),roughness:.35,emissive:color,emissiveIntensity:.35});
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,L-2.2,12),m); shaft.position.y=(L-2.2)/2; g.add(shaft);
+  const head=new THREE.Mesh(new THREE.ConeGeometry(.95,2.2,16),m); head.position.y=L-1.1; g.add(head);
+  g.position.copy(a); g.quaternion.setFromUnitVectors(V(0,1,0),dir); return g; }
+const ARROWS={};
+SIDES.forEach(s=>{ ARROWS[s]=new THREE.Group(); G.arrows.add(ARROWS[s]);
+  [['clav',V(s*4.2,0.6,12.4),V(s*12.6,-4.6,9.6)],['ster',V(s*3.4,-8,13.2),V(s*13.2,-7.4,9.4)],['abd',V(s*4.4,-17.4,11.6),V(s*13.0,-10.2,8.8)]]
+    .forEach(([p,a,b])=>{ const ar=fatArrow(a,b,COL[p]); ar.userData.part=p; ARROWS[s].add(ar); }); });
+
+/* ---------- Puntos de flujo ---------- */
+const FLOW_N=2;
+const flowGeo=new THREE.BufferGeometry(); flowGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(FIBERS.length*FLOW_N*3),3));
+const flowPts=new THREE.Points(flowGeo,new THREE.PointsMaterial({color:0xffffff,size:0.9,sizeAttenuation:true,transparent:true,opacity:.95,depthTest:true}));
+G.flow.add(flowPts);
+const nGeo=new THREE.BufferGeometry(); nGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(NERVES.length*3),3));
+const nPts=new THREE.Points(nGeo,new THREE.PointsMaterial({color:0xfff6c8,size:1.0,sizeAttenuation:true,depthTest:false,transparent:true}));
+G.nerves.add(nPts);
+
+/* ---------- Pose del brazo ---------- */
+const REST={abd:5,flex:0,rot:0,h:0,elbow:0};
+let pose=Object.assign({},REST);
+const qa=new THREE.Quaternion(), qb=new THREE.Quaternion(), qc=new THREE.Quaternion(), qd=new THREE.Quaternion();
+const AX_X=V(1,0,0), AX_Y=V(0,1,0), AX_Z=V(0,0,1);
+function applyPose(){
+  SIDES.forEach(s=>{ qa.setFromAxisAngle(AX_Y,-s*pose.h*D2R); qb.setFromAxisAngle(AX_Z,s*pose.abd*D2R); qc.setFromAxisAngle(AX_X,-pose.flex*D2R); qd.setFromAxisAngle(AX_Y,-s*pose.rot*D2R);
+    ARM[s].piv.quaternion.copy(qa).multiply(qb).multiply(qc).multiply(qd); ARM[s].fore.rotation.set(-pose.elbow*D2R,0,0); });
+  rebuildDyn();
+}
+
+/* ---------- Estado de visibilidad ---------- */
+const VIS={ sternum:true, ribs:true, cart:true, clavicle:true, scapula:true, arm:true, spine:true,
+  pecMinor:true, subclavius:true, deltoid:false, serratus:true, latissimus:false, coraco:false, abdominal:false, cephalic:true, artery:false };
+const BONES=[['sternum','Esternón'],['ribs','Costillas'],['cart','Cartílagos costales'],['clavicle','Clavícula'],['scapula','Escápula'],['arm','Húmero y antebrazo'],['spine','Columna']];
+const MUSCLES=[['pecMinor','Pectoral menor'],['subclavius','Subclavio'],['deltoid','Deltoides'],['serratus','Serrato anterior'],['latissimus','Dorsal ancho'],['coraco','Coracobraquial y bíceps'],['abdominal','Recto y oblicuo externo']];
+const VESSELS=[['cephalic','Vena cefálica'],['artery','Arteria axilar']];
+function makeToggles(id,list,sw){ const el=document.getElementById(id); list.forEach(([k,t])=>{ const l=document.createElement('label'); l.className='tg';
+  l.innerHTML=`<input type="checkbox" id="vis-${k}" ${VIS[k]?'checked':''}><i class="sw" style="background:${sw(k)}"></i>${t}`; el.appendChild(l);
+  l.querySelector('input').addEventListener('change',e=>{ VIS[k]=e.target.checked; refresh(); }); }); }
+makeToggles('tg-bones',BONES,()=> 'var(--bone)');
+makeToggles('tg-muscles',MUSCLES,()=> '#a8665c');
+makeToggles('tg-vessels',VESSELS,k=> k==='artery'?'var(--art)':'#3d5fb0');
+
+const PARTS_ON={clav:true,ster:true,abd:true};
+const OPT={arrows:true, flow:!reduceMotion, both:false, labels:true, bynerve:true, pulse:!reduceMotion, opacity:1, opacity2:0.45};
+document.getElementById('opt-flow').checked=OPT.flow; document.getElementById('opt-pulse').checked=OPT.pulse;
+let tab='fibras';
+
+/* ---------- Movimientos ---------- */
+const MOVES=[
+  {id:'add', name:'Aducción', from:{abd:90}, to:{abd:5}, active:['clav','ster','abd'], syn:['latissimus'],
+   text:'Desde 90° de abducción, el brazo baja hacia el tronco. Trabajan las tres porciones, sobre todo la esternocostal: sus fibras horizontales tiran del húmero hacia la línea media.',
+   synText:'Sinergistas: dorsal ancho, redondo mayor, cabeza larga del tríceps.'},
+  {id:'rot', name:'Rotación medial', from:{rot:-25,elbow:90}, to:{rot:70,elbow:90}, active:['clav','ster','abd'], syn:['latissimus'],
+   text:'Con el codo a 90°, la mano gira hacia el abdomen. El tendón se inserta en la cara anterior del húmero, lateral al eje del hueso; al tirar hacia medial, hace girar la diáfisis hacia dentro.',
+   synText:'Sinergistas: subescapular, dorsal ancho, redondo mayor, deltoides anterior.'},
+  {id:'flex', name:'Flexión · porción clavicular', from:{flex:0}, to:{flex:90}, active:['clav'], syn:['deltoid','coraco'],
+   text:'Las fibras claviculares, oblicuas hacia abajo y lateral, pasan por delante del hombro. Al acortarse elevan el brazo hacia delante. Son eficaces hasta unos 60–90° de flexión.',
+   synText:'Sinergistas: deltoides anterior, coracobraquial, cabeza corta del bíceps.'},
+  {id:'ext', name:'Extensión desde flexión · esternocostal', from:{flex:130}, to:{flex:0}, active:['ster','abd'], syn:['latissimus'],
+   text:'Con el brazo flexionado, las fibras esternocostales y abdominales quedan por debajo del húmero y tiran de él hacia abajo hasta la posición anatómica, como al trepar o remar. No extienden más allá de esa posición.',
+   synText:'Sinergistas: dorsal ancho, redondo mayor, cabeza larga del tríceps.'},
+  {id:'hz', name:'Aducción horizontal', from:{abd:90,h:0}, to:{abd:90,h:85}, active:['clav','ster'], syn:['deltoid'],
+   text:'Con el brazo a 90° de abducción, lo lleva hacia delante en el plano horizontal, como en un abrazo o un press de banca. Trabajan sobre todo la porción clavicular y la esternocostal superior.',
+   synText:'Sinergistas: deltoides anterior, coracobraquial.'}
+];
+let move=MOVES[0], playing=!reduceMotion, tt=0;
+const movesEl=document.getElementById('moves');
+MOVES.forEach(m=>{ const b=document.createElement('button'); b.textContent=m.name; b.dataset.id=m.id; b.setAttribute('aria-pressed',m===move); movesEl.appendChild(b);
+  b.addEventListener('click',()=>{ move=m; tt=0; movesEl.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); renderMove(); refresh(); if(!playing) setProgress(0); }); });
+const PNAME={clav:'Clavicular',ster:'Esternocostal',abd:'Abdominal'};
+function renderMove(){ document.getElementById('mv-title').textContent=move.name; document.getElementById('mv-text').textContent=move.text; document.getElementById('mv-syn').textContent=move.synText;
+  document.getElementById('mv-chips').innerHTML=['clav','ster','abd'].map(p=>`<span class="chip" style="opacity:${move.active.includes(p)?1:.45}"><i style="background:var(--${p})"></i>${PNAME[p]} ${move.active.includes(p)?'· activa':'· en reposo'}</span>`).join(''); }
+renderMove();
+const barsEl=document.getElementById('bars');
+barsEl.innerHTML=['clav','ster','abd'].map(p=>`<div class="bar"><span>${PNAME[p]}</span><span class="track"><span class="fill" id="bf-${p}" style="background:var(--${p})"></span><span class="mid"></span></span><output id="bo-${p}">100 %</output></div>`).join('');
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function poseAt(m,p){ const e=ease(p); const o=Object.assign({},REST); const f=Object.assign({},REST,m.from), t=Object.assign({},REST,m.to); for(const k in o) o[k]=f[k]+(t[k]-f[k])*e; return o; }
+const scrub=document.getElementById('scrub'), playBtn=document.getElementById('play'), phaseEl=document.getElementById('phase');
+function setProgress(p){ pose=poseAt(move,p); applyPose(); scrub.value=Math.round(p*1000); }
+playBtn.textContent=playing?'Pausar':'Reproducir';
+playBtn.addEventListener('click',()=>{ playing=!playing; playBtn.textContent=playing?'Pausar':'Reproducir'; if(playing) tt=scrub.value/1000; });
+scrub.addEventListener('input',()=>{ playing=false; playBtn.textContent='Reproducir'; tt=scrub.value/1000; setProgress(tt); phase(true); });
+function phase(conc){ phaseEl.classList.toggle('on',conc); phaseEl.querySelector('span').textContent= conc?'Fase concéntrica: las porciones activas se acortan':'Fase excéntrica: regreso controlado'; }
+let restLen=null;
+function partLengths(){ const L={clav:0,ster:0,abd:0}, n={clav:0,ster:0,abd:0}; FIBERS.forEach(f=>{ if(f.side!==-1) return; L[f.part]+=f.d.mesh.userData.curve.getLength(); n[f.part]++; }); for(const k in L) L[k]/=n[k]; return L; }
+function updateBars(){ if(!restLen) return; const L=partLengths(); ['clav','ster','abd'].forEach(p=>{ const r=L[p]/restLen[p]; const pct=Math.round(r*100);
+  document.getElementById('bo-'+p).textContent=pct+' %'; document.getElementById('bf-'+p).style.width=Math.max(2,Math.min(100,r*50))+'%'; }); }
+
+/* ---------- Aplicar pestaña / visibilidad ---------- */
+function refresh(){
+  const inA=tab==='anatomia', inM=tab==='movimiento', inN=tab==='inervacion', inF=tab==='fibras';
+  ['sternum','ribs','cart','clavicle','scapula','arm','spine'].forEach(k=>G[k].visible=VIS[k]);
+  const showRel=k=> inA ? VIS[k] : false;
+  ['pecMinor','subclavius','serratus','abdominal','cephalic'].forEach(k=>G[k].visible=showRel(k));
+  G.artery.visible = inA?VIS.artery:inN;
+  G.pecMinor.visible = inA?VIS.pecMinor:inN;
+  ['deltoid','latissimus','coraco'].forEach(k=>{ G[k].visible = inA?VIS[k]: (inM && move.syn.includes(k)); G[k].children.forEach(c=>c.material= inM?M.syn:M.muscle); });
+  G.nerves.visible=inN; G.plexus.visible=inN; nPts.visible=inN&&OPT.pulse;
+  G.arrows.visible=inF&&OPT.arrows; G.flow.visible=inF&&OPT.flow;
+  SIDES.forEach(s=>{ const sideOn = s===-1 || OPT.both;
+    ['clav','ster','abd'].forEach(p=>{ PEC[s][p].visible = sideOn && (inF? PARTS_ON[p] : true); });
+    ARROWS[s].visible = sideOn; ARROWS[s].children.forEach(a=>a.visible=PARTS_ON[a.userData.part]); });
+  // materiales
+  FIBERS.forEach(f=>{ f.d.mesh.material = (inN&&OPT.bynerve) ? (f.nerve==='lat'?M.fnlat:M.fnmed) : M[f.part]; });
+  const pecOp = inN?OPT.opacity2 : inA?OPT.opacity : 1;
+  [M.clav,M.ster,M.abd,M.fnlat,M.fnmed].forEach(m=>{ setOpacity(m,pecOp); m.emissive.setHex(0); });
+  [M.bone,M.cart].forEach(m=>setOpacity(m, inN?0.55:1));
+  if(inM){ ['clav','ster','abd'].forEach(p=>setOpacity(M[p], move.active.includes(p)?1:0.18)); setOpacity(M.syn,0.8); }
+  if(!inM){ pose=Object.assign({},REST); applyPose(); }
+  rebuildDyn();
+  renderLegend(); buildLabels();
+}
+
+/* ---------- Leyenda ---------- */
+function renderLegend(){ const L=document.getElementById('legend'); let items;
+  if(tab==='fibras') items=[['var(--clav)','Clavicular ↘'],['var(--ster)','Esternocostal →'],['var(--abd)','Abdominal ↗'],['var(--bone)','Hueso'],['#9fc6d2','Cartílago']];
+  else if(tab==='anatomia') items=[['var(--ster)','Pectoral mayor'],['#b9786b','Plano profundo'],['#a8665c','Músculos relacionados'],['var(--bone)','Hueso'],['#9fc6d2','Cartílago']];
+  else if(tab==='movimiento') items=[['var(--ster)','Porción activa'],['color-mix(in srgb,var(--ster) 25%,transparent)','En reposo'],['#8d9aa6','Sinergista']];
+  else items=[['var(--nlat)','N. pectoral lateral'],['var(--nmed)','N. pectoral medial'],['var(--plexo)','Plexo braquial'],['var(--art)','Arteria axilar'],['#b9786b','Pectoral menor']];
+  L.innerHTML=items.map(([c,t])=>`<span><i style="background:${c}"></i>${t}</span>`).join(''); }
+
+/* ---------- Etiquetas ---------- */
+const R=-1; // lado derecho del paciente
+const LABELS=[
+  {t:'Porción clavicular',tabs:['fibras','movimiento'],p:()=>V(-6.8,0.2,11.4),side:R},
+  {t:'Porción esternocostal',tabs:['fibras','movimiento'],p:()=>V(-5.6,-8,12.6),side:R},
+  {t:'Porción abdominal',tabs:['fibras','movimiento'],p:()=>V(-6.4,-17.2,11.2),side:R},
+  {t:'Inserción: cresta del tubérculo mayor',tabs:['fibras'],p:()=>wp(ARM[R].mk.label),side:1},
+  {t:'Clavícula',tabs:['fibras','anatomia'],p:()=>V(8.2,1.8,8.4),side:1},
+  {t:'Manubrio',tabs:['anatomia'],p:()=>V(1.2,-2.4,10.4),side:1},
+  {t:'Cuerpo del esternón',tabs:['anatomia','fibras'],p:()=>V(1.2,-10,10.2),side:1},
+  {t:'Apófisis xifoides',tabs:['anatomia'],p:()=>V(0.4,-17.2,9.6),side:1},
+  {t:'Cartílagos costales',tabs:['anatomia','fibras'],p:()=>V(5.2,-13.6,8.8),side:1},
+  {t:'Costillas',tabs:['anatomia','fibras'],p:()=>V(12.6,-11,4.2),side:1},
+  {t:'Acromion',tabs:['anatomia'],p:()=>V(16.2,1.9,0.9),side:1},
+  {t:'Apófisis coracoides',tabs:['anatomia'],p:()=>CT[1].clone(),side:1},
+  {t:'Pectoral menor',tabs:['anatomia','inervacion'],p:()=>V(9.4,-6.8,6.6),side:1,need:'pecMinor'},
+  {t:'Subclavio',tabs:['anatomia'],p:()=>V(6.2,-0.2,6.9),side:1,need:'subclavius'},
+  {t:'Serrato anterior',tabs:['anatomia'],p:()=>V(12.6,-17,1.5),side:1,need:'serratus'},
+  {t:'Húmero',tabs:['anatomia','movimiento'],p:()=>wp(ARM[1].mk.label),side:1},
+  {t:'Deltoides',tabs:['anatomia','movimiento'],p:()=>wp(ARM[R].mk.delt).add(V(-1.6,4,1)),side:R,need:'deltoid'},
+  {t:'Dorsal ancho',tabs:['anatomia','movimiento'],p:()=>V(-12.6,-21,-6),side:R,need:'latissimus'},
+  {t:'Vena cefálica · surco deltopectoral',tabs:['anatomia'],p:()=>V(-14.2,-1.6,5.6),side:R,need:'cephalic'},
+  {t:'Recto del abdomen',tabs:['anatomia'],p:()=>V(-3.6,-30,8.8),side:R,need:'abdominal'},
+  {t:'Plexo braquial',tabs:['inervacion'],p:()=>V(7.4,3.6,-2.6),side:1},
+  {t:'Arteria axilar',tabs:['inervacion'],p:()=>V(13.4,-5.4,1.8),side:1},
+  {t:'Asa pectoral',tabs:['inervacion'],p:()=>V(11.2,-3.4,3.4),side:1},
+  {t:'N. pectoral lateral',tabs:['inervacion'],p:()=>V(-7.8,-1.6,7.0),side:R},
+  {t:'N. pectoral medial',tabs:['inervacion'],p:()=>V(-8.8,-8.4,6.9),side:R},
+  {t:'Cordón lateral',tabs:['inervacion'],p:()=>V(-11.6,-2.4,2.0),side:R},
+  {t:'Cordón medial',tabs:['inervacion'],p:()=>V(-12.4,-5.2,1.4),side:R}
+];
+const labelsEl=document.getElementById('labels'); let activeLabels=[];
+function buildLabels(){ labelsEl.innerHTML=''; activeLabels=[]; if(!OPT.labels) return;
+  LABELS.forEach(L=>{ if(!L.tabs.includes(tab)) return; if(L.need && tab==='anatomia' && !VIS[L.need]) return; if(L.need && tab==='movimiento' && !move.syn.includes(L.need)) return;
+    const el=document.createElement('div'); el.className='lbl'+(L.side<0?' r':''); el.innerHTML=`<span>${L.t}</span>`; labelsEl.appendChild(el); activeLabels.push({L,el}); }); }
+function placeLabels(){ const w=stageEl.clientWidth,h=stageEl.clientHeight; const camDir=camera.getWorldDirection(new THREE.Vector3());
+  activeLabels.forEach(({L,el})=>{ const p=L.p(); const v=p.clone().project(camera); const toP=p.clone().sub(camera.position).normalize();
+    if(v.z>1||v.z<-1||Math.abs(v.x)>1.05||Math.abs(v.y)>1.05||toP.dot(camDir)<0){ el.style.visibility='hidden'; return; }
+    el.style.visibility='visible'; const x=(v.x*.5+.5)*w, y=(-v.y*.5+.5)*h; const ow=L.side<0?el.offsetWidth:0;
+    el.style.transform=`translate(${Math.round(x-(L.side<0?ow-3:3))}px,${Math.round(y-8)}px)`; }); }
+
+/* ---------- Tooltip ---------- */
+const tip=document.getElementById('tip'); const ray=new THREE.Raycaster(); const ndc=new THREE.Vector2();
+function pick(cx,cy){ const r=canvas.getBoundingClientRect(); ndc.set(((cx-r.left)/r.width)*2-1, -((cy-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
+  const list=[]; scene.traverseVisible(o=>{ if(o.isMesh && o.userData.info && (!o.material.transparent || o.material.opacity>0.3)) list.push(o); });
+  const hit=ray.intersectObjects(list,false)[0]; if(!hit){ tip.hidden=true; return; }
+  const inf=INFO[hit.object.userData.info]; if(!inf){ tip.hidden=true; return; }
+  tip.innerHTML=`<b>${inf[0]}</b>${inf[1]}`; tip.hidden=false; const x=cx-r.left, y=cy-r.top; const tw=tip.offsetWidth, th=tip.offsetHeight;
+  tip.style.left=Math.min(Math.max(8,x+14), r.width-tw-8)+'px'; tip.style.top=Math.min(Math.max(8,y+14), r.height-th-8)+'px'; }
+let down=null, lastMove=0;
+canvas.addEventListener('pointerdown',e=>{ down={x:e.clientX,y:e.clientY}; });
+canvas.addEventListener('pointerup',e=>{ if(down && Math.hypot(e.clientX-down.x,e.clientY-down.y)<6) pick(e.clientX,e.clientY); down=null; });
+canvas.addEventListener('pointermove',e=>{ if(e.pointerType!=='mouse'||e.buttons) return; const n=performance.now(); if(n-lastMove<60) return; lastMove=n; pick(e.clientX,e.clientY); });
+canvas.addEventListener('pointerleave',()=>{ tip.hidden=true; });
+
+/* ---------- Vistas ---------- */
+const VIEWS={ant:[0,-6,92],obl:[-58,0,70],lat:[-92,-6,6],sup:[0,70,40],post:[0,-6,-92]};
+let camAnim=null;
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{ const to=V(...VIEWS[b.dataset.view]); camAnim={from:camera.position.clone(),to,tf:controls.target.clone(),tt:V(0,-11,0),t:0}; }));
+
+/* ---------- Pestañas y opciones ---------- */
+function setTab(t){ tab=t; document.querySelectorAll('[role=tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
+  ['fibras','anatomia','movimiento','inervacion'].forEach(k=>document.getElementById('p-'+k).hidden= k!==t); tip.hidden=true;
+  if(t==='movimiento'){ tt=0; setProgress(0); }
+  refresh(); try{ localStorage.setItem('pm3d-tab',t); }catch(e){} }
+document.querySelectorAll('[role=tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+document.querySelectorAll('.part').forEach(b=>b.addEventListener('click',()=>{ const p=b.dataset.part; PARTS_ON[p]=!PARTS_ON[p]; b.setAttribute('aria-pressed',PARTS_ON[p]); refresh(); }));
+[['opt-arrows','arrows'],['opt-flow','flow'],['opt-both','both'],['opt-labels','labels'],['opt-bynerve','bynerve'],['opt-pulse','pulse']].forEach(([id,k])=>document.getElementById(id).addEventListener('change',e=>{ OPT[k]=e.target.checked; refresh(); }));
+document.getElementById('opt-opacity').addEventListener('input',e=>{ OPT.opacity=e.target.value/100; document.getElementById('out-opacity').textContent=e.target.value+' %'; refresh(); });
+document.getElementById('opt-opacity2').addEventListener('input',e=>{ OPT.opacity2=e.target.value/100; document.getElementById('out-opacity2').textContent=e.target.value+' %'; refresh(); });
+
+/* ---------- Tamaño ---------- */
+function resize(){ const w=stageEl.clientWidth, h=stageEl.clientHeight; if(!w||!h) return; renderer.setSize(w,h,false); camera.aspect=w/h;
+  camera.fov = w/h<0.9 ? 46 : 32; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(stageEl); resize();
+
+/* ---------- Inicio ---------- */
+applyPose(); rebuildDyn(true); restLen=partLengths();
+let saved=null; try{ saved=localStorage.getItem('pm3d-tab'); }catch(e){}
+setTab(['fibras','anatomia','movimiento','inervacion'].includes(saved)?saved:'fibras');
+
+/* ---------- Bucle ---------- */
+let last=performance.now(), clock=0;
+function frame(now){ const dt=Math.max(0,Math.min(0.05,(now-last)/1000)); last=now; clock+=dt;
+  if(camAnim){ camAnim.t=Math.min(1,camAnim.t+dt*1.6); const e=ease(camAnim.t); camera.position.lerpVectors(camAnim.from,camAnim.to,e); controls.target.lerpVectors(camAnim.tf,camAnim.tt,e); if(camAnim.t>=1) camAnim=null; }
+  if(tab==='movimiento'){
+    if(playing){ tt=(tt+dt/2.6)%2; const p=tt<1?tt:2-tt; setProgress(p); phase(tt<1);
+      const k=tt<1?0.25+0.25*Math.sin(Math.min(1,tt)*Math.PI):0; move.active.forEach(pp=>{ M[pp].emissive.setHex(COL[pp]); M[pp].emissiveIntensity=k; }); }
+    updateBars();
+  }
+  if(G.flow.visible){ const a=flowGeo.attributes.position.array; let j=0; FIBERS.forEach((f,i)=>{ const c=f.d.mesh.userData.curve; const on=visibleChain(f.d.mesh);
+      for(let q=0;q<FLOW_N;q++){ const u=((clock*0.35+i*0.137+q/FLOW_N)%1); const p=on?c.getPointAt(u):tmp.set(0,-999,0); a[j++]=p.x;a[j++]=p.y;a[j++]=p.z+(on?0.25:0); } });
+    flowGeo.attributes.position.needsUpdate=true; flowGeo.computeBoundingSphere(); }
+  if(nPts.visible){ const a=nGeo.attributes.position.array; NERVES.forEach((n,i)=>{ const u=((clock*0.45+i*0.21)%1); const p=n.mesh.userData.curve.getPointAt(u); a[i*3]=p.x;a[i*3+1]=p.y;a[i*3+2]=p.z; });
+    nGeo.attributes.position.needsUpdate=true; nGeo.computeBoundingSphere(); }
+  controls.update(); renderer.render(scene,camera); placeLabels(); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
