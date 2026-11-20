@@ -64,9 +64,19 @@ const MODEL_FILES = { m: 'models/male_anatomy_mobile.glb', f: 'models/female_ana
 async function loadModel(sex) {
   if (models[sex]) return models[sex];
   if (!musclesJson) musclesJson = await (await fetch('models/muscles.json')).json();
-  const gltf = await loader.loadAsync(MODEL_FILES[sex], (e) => {
-    if (e.total) setLoading(`Cargando modelo anatómico… ${Math.round((e.loaded / e.total) * 100)} %`);
-  });
+  let gltf;
+  if (window.ANAT_B64) {
+    // variante publicada: el .glb viaja como texto base64
+    const txt = await (await fetch(MODEL_FILES[sex].replace('.glb', '.glb.b64.txt'))).text();
+    const bin = atob(txt.trim());
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    gltf = await loader.parseAsync(buf.buffer, '');
+  } else {
+    gltf = await loader.loadAsync(MODEL_FILES[sex], (e) => {
+      if (e.total) setLoading(`Cargando modelo anatómico… ${Math.round((e.loaded / e.total) * 100)} %`);
+    });
+  }
   let mesh = null;
   gltf.scene.traverse((o) => { if (o.isSkinnedMesh) mesh = o; });
   mesh.castShadow = true; mesh.receiveShadow = true;
