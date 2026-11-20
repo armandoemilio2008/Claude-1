@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anatomía en Movimiento</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Modelo anatómico 3D que ejecuta ejercicios de gimnasio y resalta los músculos que trabajan.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Anatomía en Movimiento</h1>
+        <p>Rutina PPL + Torso + Legs · músculos que trabaja cada ejercicio</p>
+      </div>
+    </div>
+    <div class="legend" aria-label="Leyenda de colores">
+      <span><i class="sw p"></i>Principal</span>
+      <span><i class="sw s"></i>Secundario</span>
+    </div>
+  </header>
+
+  <aside class="side" aria-label="Ejercicios">
+    <div class="side-head">
+      <label class="search" for="search">
+        <span class="visually-hidden">Buscar ejercicio o músculo</span>
+        <input id="search" type="search" placeholder="Buscar ejercicio o músculo" autocomplete="off">
+      </label>
+      <div class="filters" id="filters" role="group" aria-label="Filtrar">
+        <button type="button" data-f="todos" aria-pressed="true">Todos</button>
+        <button type="button" data-f="rutina" aria-pressed="false">Mi rutina</button>
+        <button type="button" data-f="pecho" aria-pressed="false">Pecho</button>
+        <button type="button" data-f="espalda" aria-pressed="false">Espalda</button>
+        <button type="button" data-f="hombro" aria-pressed="false">Hombro</button>
+        <button type="button" data-f="brazos" aria-pressed="false">Brazos</button>
+        <button type="button" data-f="piernas" aria-pressed="false">Piernas</button>
+        <button type="button" data-f="core" aria-pressed="false">Core</button>
+      </div>
+      <p class="count" id="count"></p>
+    </div>
+    <ul class="list" id="list"></ul>
+  </aside>
+
+  <main class="stage" id="stage">
+    <canvas id="scene" aria-label="Modelo anatómico 3D ejecutando el ejercicio. Arrastra para girar."></canvas>
+    <div class="loading" id="loading">Cargando modelo anatómico…</div>
+    <div class="hud-top">
+      <div class="ex-head">
+        <p class="eyebrow"><span id="ex-cat"></span> · <span id="ex-equip"></span></p>
+        <h2 id="ex-title">—</h2>
+      </div>
+      <div class="seg" id="sex" role="group" aria-label="Modelo">
+        <button type="button" data-sex="m" aria-pressed="true">Hombre</button>
+        <button type="button" data-sex="f" aria-pressed="false">Mujer</button>
+      </div>
+    </div>
+    <div class="hud-bottom">
+      <div class="phase-wrap">
+        <p class="phase" id="phase" aria-live="off"></p>
+        <div class="track"><div class="bar" id="bar"></div></div>
+      </div>
+      <div class="controls">
+        <button type="button" id="play" class="play" aria-pressed="true"><span class="ico" aria-hidden="true">❚❚</span><span class="lbl">Pausa</span></button>
+        <div class="seg" id="speed" role="group" aria-label="Velocidad">
+          <button type="button" data-s="0.5" aria-pressed="false">0,5×</button>
+          <button type="button" data-s="1" aria-pressed="true">1×</button>
+          <button type="button" data-s="2" aria-pressed="false">2×</button>
+        </div>
+        <div class="seg" id="views" role="group" aria-label="Vista">
+          <button type="button" data-v="auto">Auto</button>
+          <button type="button" data-v="front">Frente</button>
+          <button type="button" data-v="side">Lado</button>
+          <button type="button" data-v="back">Espalda</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <section class="info" aria-label="Detalle del ejercicio">
+    <p class="src" id="ex-src"></p>
+    <div class="rx" id="rx" hidden></div>
+    <h3>Músculos principales</h3>
+    <ul class="muscles" id="prim"></ul>
+    <h3>Músculos secundarios</h3>
+    <ul class="muscles" id="sec"></ul>
+    <p class="hint">Pasa el cursor o toca un músculo para aislarlo en el modelo.</p>
+    <h3>Cómo se hace</h3>
+    <ol class="cues" id="cues"></ol>
+    <p class="tempo" id="tempo"></p>
+    <p class="side-note" id="side-note" hidden></p>
+  </section>
+
+  <footer class="credit">
+    Anatomía muscular: <a href="https://www.z-anatomy.com/" target="_blank" rel="noopener">Z-Anatomy</a> / <a href="https://lifesciencedb.jp/bp3d/" target="_blank" rel="noopener">BodyParts3D</a> (CC BY-SA 4.0) · Cuerpo y esqueleto: MakeHuman (CC0) · Modelo vía <a href="https://github.com/AygunAlpKagan/ecorche-body" target="_blank" rel="noopener">ecorche-body</a>, con colores y poses modificados · Render: three.js. Animaciones esquemáticas, no sustituyen la guía de un entrenador.
+  </footer>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
